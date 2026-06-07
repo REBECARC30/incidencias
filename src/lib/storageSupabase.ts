@@ -1,7 +1,7 @@
 import type { Incidencia, Persona, TratamientoRegistro } from '../types'
 import { normalizePersona } from './habitaciones'
 import { normalizeIncidencia, type LegacyIncidenciaFields } from './normalizeIncidencia'
-import { supabase } from './supabase'
+import { getSupabase } from './supabase'
 import { normalizeHoras, normalizeTratamientos } from './tratamientos'
 
 type PersonaRow = {
@@ -233,6 +233,7 @@ function incidenciaToLegacyRow(
 }
 
 function client() {
+  const supabase = getSupabase()
   if (!supabase) throw new Error('Supabase no configurado')
   return supabase
 }

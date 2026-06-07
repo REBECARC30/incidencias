@@ -5,6 +5,43 @@ import { matchesIncidenciaFechaFilter } from './dates'
 import { normalizeIncidencia } from './normalizeIncidencia'
 import { formatTratamientos } from './tratamientos'
 import { isSupabaseConfigured } from './supabase'
+
+let preferLocalStorage = false
+
+function shouldUseSupabase(): boolean {
+  return isSupabaseConfigured() && !preferLocalStorage
+}
+
+function disableSupabaseFallback(): void {
+  preferLocalStorage = true
+}
+
+function isSupabaseFailure(err: unknown): boolean {
+  if (!(err instanceof Error)) return false
+  const msg = err.message.toLowerCase()
+  return (
+    msg.includes('schema cache') ||
+    msg.includes('does not exist') ||
+    msg.includes('could not find the') ||
+    msg.includes('supabase no configurado')
+  )
+}
+
+async function withStorageFallback<T>(
+  supabaseFn: () => Promise<T>,
+  localFn: () => T | Promise<T>,
+): Promise<T> {
+  if (!shouldUseSupabase()) return localFn()
+  try {
+    return await supabaseFn()
+  } catch (err) {
+    if (isSupabaseFailure(err)) {
+      disableSupabaseFallback()
+      return localFn()
+    }
+    throw err
+  }
+}
 import {
   createIncidenciaInSupabase,
   deletePersonaFromSupabase,
@@ -121,25 +158,33 @@ function createIncidenciaLocal(data: Omit<Incidencia, 'id' | 'createdAt'>): Inci
 }
 
 export async function getPersonas(): Promise<Persona[]> {
-  if (isSupabaseConfigured) return getPersonasFromSupabase()
-  return getPersonasLocal()
+  return withStorageFallback(getPersonasFromSupabase, getPersonasLocal)
 }
 
 export async function savePersona(
   input: Omit<Persona, 'id' | 'createdAt'> & { id?: string },
 ): Promise<Persona> {
-  if (isSupabaseConfigured) return savePersonaToSupabase(input)
-  return savePersonaLocal(input)
+  return withStorageFallback(() => savePersonaToSupabase(input), () => savePersonaLocal(input))
 }
 
 export async function deletePersona(id: string): Promise<void> {
-  if (isSupabaseConfigured) return deletePersonaFromSupabase(id)
+  if (shouldUseSupabase()) {
+    return withStorageFallback(
+      () => deletePersonaFromSupabase(id),
+      () => {
+        deletePersonaLocal(id)
+      },
+    )
+  }
   deletePersonaLocal(id)
 }
 
 export async function getIncidencias(): Promise<Incidencia[]> {
-  if (isSupabaseConfigured) {
-    return (await getIncidenciasFromSupabase()).map((item) => normalizeIncidencia(item))
+  if (shouldUseSupabase()) {
+    return withStorageFallback(
+      async () => (await getIncidenciasFromSupabase()).map((item) => normalizeIncidencia(item)),
+      getIncidenciasLocal,
+    )
   }
   return getIncidenciasLocal()
 }
@@ -147,8 +192,7 @@ export async function getIncidencias(): Promise<Incidencia[]> {
 export async function createIncidencia(
   data: Omit<Incidencia, 'id' | 'createdAt'>,
 ): Promise<Incidencia> {
-  if (isSupabaseConfigured) return createIncidenciaInSupabase(data)
-  return createIncidenciaLocal(data)
+  return withStorageFallback(() => createIncidenciaInSupabase(data), () => createIncidenciaLocal(data))
 }
 
 export function filterIncidencias(

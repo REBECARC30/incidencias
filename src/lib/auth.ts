@@ -1,5 +1,5 @@
 import type { AuthSession } from '../types'
-import { isSupabaseConfigured, supabase } from './supabase'
+import { getSupabase, getSupabaseAuthEmail, isSupabaseConfigured } from './supabase'
 
 const SESSION_KEY = 'appincidencias_session'
 const PLACEHOLDER_PASSWORD = 'tu-contraseña-segura'
@@ -22,19 +22,20 @@ const CENTRO_SESSION: AuthSession = {
 export async function login(password: string): Promise<AuthSession> {
   const pass = password
 
-  if (isSupabaseConfigured && supabase) {
-    const email =
-      (import.meta.env.VITE_SUPABASE_AUTH_EMAIL as string | undefined) ||
-      'centro@appincidencias.local'
+  if (isSupabaseConfigured()) {
+    const supabase = getSupabase()
+    if (!supabase) throw new Error('Supabase no disponible')
+    const email = getSupabaseAuthEmail()
     const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass })
-    if (error || !data.user) throw new Error('Contraseña incorrecta')
-    const session: AuthSession = {
-      workerId: data.user.id,
-      displayName:
-        (data.user.user_metadata?.displayName as string) || CENTRO_SESSION.displayName,
+    if (!error && data.user) {
+      const session: AuthSession = {
+        workerId: data.user.id,
+        displayName:
+          (data.user.user_metadata?.displayName as string) || CENTRO_SESSION.displayName,
+      }
+      localStorage.setItem(SESSION_KEY, JSON.stringify(session))
+      return session
     }
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session))
-    return session
   }
 
   const expected = getAppPassword()
@@ -60,12 +61,13 @@ export function getSession(): AuthSession | null {
 }
 
 export async function logout(): Promise<void> {
-  if (isSupabaseConfigured && supabase) {
-    await supabase.auth.signOut()
+  if (isSupabaseConfigured()) {
+    const supabase = getSupabase()
+    if (supabase) await supabase.auth.signOut()
   }
   localStorage.removeItem(SESSION_KEY)
 }
 
 export function isUsingLocalMode(): boolean {
-  return !isSupabaseConfigured
+  return !isSupabaseConfigured()
 }

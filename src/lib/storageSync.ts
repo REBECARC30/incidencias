@@ -1,4 +1,4 @@
-import { isSupabaseConfigured, supabase } from './supabase'
+import { getSupabase, isSupabaseConfigured } from './supabase'
 
 export type SyncTable = 'personas' | 'incidencias'
 
@@ -6,7 +6,7 @@ type SyncListener = () => void
 
 type TableSync = {
   listeners: Set<SyncListener>
-  channel: ReturnType<NonNullable<typeof supabase>['channel']> | null
+  channel: ReturnType<NonNullable<ReturnType<typeof getSupabase>>['channel']> | null
 }
 
 const tableSync: Record<SyncTable, TableSync> = {
@@ -22,7 +22,9 @@ function notify(table: SyncTable) {
 }
 
 function ensureRealtimeChannel(table: SyncTable) {
-  if (!isSupabaseConfigured || !supabase) return
+  if (!isSupabaseConfigured()) return
+  const supabase = getSupabase()
+  if (!supabase) return
 
   const state = tableSync[table]
   if (state.channel) return
@@ -36,6 +38,7 @@ function ensureRealtimeChannel(table: SyncTable) {
 }
 
 function removeRealtimeChannel(table: SyncTable) {
+  const supabase = getSupabase()
   if (!supabase) return
 
   const state = tableSync[table]

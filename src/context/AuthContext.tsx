@@ -9,7 +9,8 @@ import {
 } from 'react'
 import type { AuthSession } from '../types'
 import { getSession, login as authLogin, logout as authLogout } from '../lib/auth'
-import { isSupabaseConfigured, supabase } from '../lib/supabase'
+import { getSupabase, isSupabaseConfigured } from '../lib/supabase'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 const SESSION_KEY = 'appincidencias_session'
 
@@ -46,16 +47,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!isSupabaseConfigured || !supabase) {
+    if (!isSupabaseConfigured()) {
       setSession(getSession())
       setLoading(false)
       return
     }
 
+    const supabaseClient = getSupabase()
+    if (!supabaseClient) {
+      setSession(getSession())
+      setLoading(false)
+      return
+    }
+
+    const db: SupabaseClient = supabaseClient
     let cancelled = false
 
     async function initSupabaseAuth() {
-      const { data, error } = await supabase!.auth.getSession()
+      const { data, error } = await db.auth.getSession()
       if (cancelled) return
 
       if (error || !data.session?.user) {
@@ -75,7 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, authSession) => {
+    } = db.auth.onAuthStateChange((_event, authSession) => {
       if (cancelled) return
 
       if (authSession?.user) {

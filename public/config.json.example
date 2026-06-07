@@ -1,0 +1,5 @@
+{
+  "supabaseUrl": "https://obczvycvnmhduopntshz.supabase.co",
+  "supabaseAnonKey": "PEGA_AQUI_LA_ANON_KEY",
+  "supabaseAuthEmail": "centro@appincidencias.local"
+}

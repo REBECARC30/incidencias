@@ -1,16 +1,44 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { resolveSupabaseRuntimeConfig, type SupabaseRuntimeConfig } from './supabaseRuntime'
 
-const url = import.meta.env.VITE_SUPABASE_URL
-const key = import.meta.env.VITE_SUPABASE_ANON_KEY
+let supabaseClient: SupabaseClient | null = null
+let runtimeConfig: SupabaseRuntimeConfig | null = null
+let initDone = false
 
-export const isSupabaseConfigured = Boolean(url && key && !url.includes('tu-proyecto'))
+export function isSupabaseConfigured(): boolean {
+  return supabaseClient !== null
+}
 
-export const supabase: SupabaseClient | null = isSupabaseConfigured
-  ? createClient(url!, key!, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true,
-      },
-    })
-  : null
+export function getSupabase(): SupabaseClient | null {
+  return supabaseClient
+}
+
+/** Compatibilidad: ya no se usa el cliente estático de build. */
+export const supabase = null as import('@supabase/supabase-js').SupabaseClient | null
+
+export function getSupabaseAuthEmail(): string {
+  return (
+    runtimeConfig?.supabaseAuthEmail?.trim() ||
+    (import.meta.env.VITE_SUPABASE_AUTH_EMAIL as string | undefined)?.trim() ||
+    'centro@appincidencias.local'
+  )
+}
+
+export async function initSupabase(): Promise<void> {
+  if (initDone) return
+  initDone = true
+
+  runtimeConfig = await resolveSupabaseRuntimeConfig()
+  if (!runtimeConfig) {
+    supabaseClient = null
+    return
+  }
+
+  supabaseClient = createClient(runtimeConfig.supabaseUrl, runtimeConfig.supabaseAnonKey, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
+  })
+}

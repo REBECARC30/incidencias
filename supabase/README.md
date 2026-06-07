@@ -46,15 +46,35 @@ En **User metadata** (JSON):
 
 ## 4. Configurar la app
 
-En tu `.env`:
+### Opción A — `public/config.json` (recomendado en Netlify)
+
+La app lee **`/config.json` al arrancar** y usa ese Supabase (ignora el proyecto antiguo `vynreuh…`).
+
+1. En Supabase → **Project Settings → API**, copia la **anon public** key de tu proyecto (`obczvycvnmhduopntshz`).
+2. En el repo:
+
+```bash
+export SUPABASE_ANON_KEY=eyJ...
+./scripts/write-config.sh
+```
+
+3. Sube `public/config.json` con el deploy (o commitea el archivo; la anon key es pública por diseño).
+
+Plantilla: [`public/config.json.example`](../public/config.json.example)
+
+### Opción B — variables `.env` (desarrollo local)
 
 ```env
-VITE_SUPABASE_URL=https://TU_PROYECTO.supabase.co
+VITE_SUPABASE_URL=https://obczvycvnmhduopntshz.supabase.co
 VITE_SUPABASE_ANON_KEY=tu-anon-key
 VITE_SUPABASE_AUTH_EMAIL=centro@appincidencias.local
 ```
 
-La URL y la anon key están en **Project Settings → API**.
+### Netlify
+
+- Borra o vacía las variables `VITE_SUPABASE_*` del sitio si apuntaban a otro proyecto.
+- Usa `public/config.json` **o** define las variables con la URL de **tu** proyecto.
+- Si no hay Supabase válido, la app puede usar modo local con `VITE_APP_PASSWORD`.
 
 Reinicia el servidor de desarrollo:
 
