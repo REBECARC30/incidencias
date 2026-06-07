@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { calcularEstadisticas, filtrarIncidenciasPorFecha } from '../lib/estadisticas'
-import { getIncidencias, getPersonas } from '../lib/storage'
+import { useIncidencias, usePersonas } from '../hooks/useStorageData'
 import { StatBarList, StatGrid, StatKpi } from '../components/StatBarList'
 import { Card, EmptyState, Field, PageHeader, SectionTitle, inputClass } from '../components/ui'
 
@@ -40,11 +40,12 @@ export function EstadisticasPage() {
     return () => window.removeEventListener('focus', onFocus)
   }, [])
 
-  const personas = useMemo(() => getPersonas(), [refreshKey])
-  const incidencias = useMemo(() => {
-    const all = getIncidencias()
-    return filtrarIncidenciasPorFecha(all, fechaDesde, fechaHasta)
-  }, [refreshKey, fechaDesde, fechaHasta])
+  const { personas, loading: loadingPersonas } = usePersonas(refreshKey)
+  const { incidencias: allIncidencias, loading: loadingIncidencias } = useIncidencias(refreshKey)
+  const incidencias = useMemo(
+    () => filtrarIncidenciasPorFecha(allIncidencias, fechaDesde, fechaHasta),
+    [allIncidencias, fechaDesde, fechaHasta],
+  )
 
   const stats = useMemo(
     () => calcularEstadisticas(incidencias, personas),
@@ -52,6 +53,14 @@ export function EstadisticasPage() {
   )
 
   const hasFiltro = !!(fechaDesde || fechaHasta)
+
+  if (loadingPersonas || loadingIncidencias) {
+    return (
+      <div className="grid min-h-[40vh] place-items-center text-sm text-slate-500">
+        Cargando estadísticas…
+      </div>
+    )
+  }
 
   if (!stats.totalIncidencias) {
     return (
@@ -217,7 +226,7 @@ export function EstadisticasPage() {
           />
         </StatSection>
 
-        <StatSection title="Personas con más registros">
+        <StatSection title="Códigos con más registros">
           <StatBarList items={stats.topPersonas} />
         </StatSection>
 

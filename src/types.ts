@@ -23,7 +23,6 @@ export type Ala = '1' | '2'
 export interface Persona {
   id: string
   codigo: string
-  nombre: string
   ala: Ala
   habitacion: string
   createdAt: string

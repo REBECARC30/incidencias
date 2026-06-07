@@ -4,11 +4,18 @@ import { normalizePersona } from './habitaciones'
 import { formatListaConOtros, normalizeLista } from './listas'
 import { matchesIncidenciaFechaFilter } from './dates'
 import { formatTratamientos, normalizeTratamientos } from './tratamientos'
+import { isSupabaseConfigured } from './supabase'
+import {
+  createIncidenciaInSupabase,
+  deletePersonaFromSupabase,
+  getIncidenciasFromSupabase,
+  getPersonasFromSupabase,
+  savePersonaToSupabase,
+} from './storageSupabase'
 
 const KEYS = {
   personas: 'appincidencias_personas',
   incidencias: 'appincidencias_incidencias',
-  session: 'appincidencias_session',
   seeded: 'appincidencias_seeded',
 } as const
 
@@ -43,7 +50,7 @@ function uid(): string {
   return crypto.randomUUID()
 }
 
-export function seedIfNeeded(): void {
+function seedIfNeededLocal(): void {
   migrateFromDemoIfNeeded()
   if (read(KEYS.seeded, false)) return
 
@@ -52,15 +59,37 @@ export function seedIfNeeded(): void {
   write(KEYS.seeded, true)
 }
 
-export function getPersonas(): Persona[] {
-  seedIfNeeded()
-  return read<Persona[]>(KEYS.personas, [])
-    .map(normalizePersona)
+function normalizeIncidencia(item: Incidencia): Incidencia {
+  return {
+    ...item,
+    estado: normalizeEstados(item.estado as string | string[]),
+    estadoOtros: item.estadoOtros ?? '',
+    ctesGlucemia: item.ctesGlucemia ?? '',
+    ctesPeso: item.ctesPeso ?? '',
+    prioridad: item.prioridad ?? '',
+    dieta: normalizeLista(item.dieta as string | string[]),
+    dietaOtros: item.dietaOtros ?? '',
+    tratamiento: normalizeTratamientos(item.tratamiento),
+    tratamientoOtros: item.tratamientoOtros ?? '',
+    tratamientoOtrosHora: item.tratamientoOtrosHora ?? '',
+    tratamientoOtrosForma: item.tratamientoOtrosForma ?? '',
+    tratamientoOtrosFormaOtros: item.tratamientoOtrosFormaOtros ?? '',
+    proceso: normalizeLista(item.proceso as string | string[]),
+    procesoOtros: item.procesoOtros ?? '',
+    firmaDibujo: item.firmaDibujo ?? '',
+  }
+}
+
+function getPersonasLocal(): Persona[] {
+  seedIfNeededLocal()
+  type LegacyPersona = Persona & { nombre?: string }
+  return read<LegacyPersona[]>(KEYS.personas, [])
+    .map(({ nombre: _nombre, ...persona }) => normalizePersona(persona))
     .sort((a, b) => a.ala.localeCompare(b.ala) || a.codigo.localeCompare(b.codigo))
 }
 
-export function savePersona(input: Omit<Persona, 'id' | 'createdAt'> & { id?: string }): Persona {
-  const list = getPersonas()
+function savePersonaLocal(input: Omit<Persona, 'id' | 'createdAt'> & { id?: string }): Persona {
+  const list = getPersonasLocal()
   const now = new Date().toISOString()
 
   if (input.id) {
@@ -80,7 +109,6 @@ export function savePersona(input: Omit<Persona, 'id' | 'createdAt'> & { id?: st
   const created: Persona = {
     id: uid(),
     codigo: input.codigo.trim().toUpperCase(),
-    nombre: input.nombre.trim(),
     ala: input.ala,
     habitacion: input.habitacion.trim(),
     createdAt: now,
@@ -89,53 +117,57 @@ export function savePersona(input: Omit<Persona, 'id' | 'createdAt'> & { id?: st
   return created
 }
 
-export function deletePersona(id: string): void {
-  const list = getPersonas().filter((p) => p.id !== id)
+function deletePersonaLocal(id: string): void {
+  const list = getPersonasLocal().filter((p) => p.id !== id)
   write(KEYS.personas, list)
 }
 
-export function getIncidencias(): Incidencia[] {
-  seedIfNeeded()
+function getIncidenciasLocal(): Incidencia[] {
+  seedIfNeededLocal()
   return read<Incidencia[]>(KEYS.incidencias, [])
-    .map((item) => ({
-      ...item,
-      estado: normalizeEstados(item.estado as string | string[]),
-      estadoOtros: item.estadoOtros ?? '',
-      ctesGlucemia: item.ctesGlucemia ?? '',
-      ctesPeso: item.ctesPeso ?? '',
-      prioridad: item.prioridad ?? '',
-      dieta: normalizeLista(item.dieta as string | string[]),
-      dietaOtros: item.dietaOtros ?? '',
-      tratamiento: normalizeTratamientos(item.tratamiento),
-      tratamientoOtros: item.tratamientoOtros ?? '',
-      tratamientoOtrosHora: item.tratamientoOtrosHora ?? '',
-      tratamientoOtrosForma: item.tratamientoOtrosForma ?? '',
-      tratamientoOtrosFormaOtros: item.tratamientoOtrosFormaOtros ?? '',
-      proceso: normalizeLista(item.proceso as string | string[]),
-      procesoOtros: item.procesoOtros ?? '',
-      firmaDibujo: item.firmaDibujo ?? '',
-    }))
+    .map(normalizeIncidencia)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 }
 
-export function createIncidencia(
-  data: Omit<Incidencia, 'id' | 'createdAt'>,
-): Incidencia {
-  seedIfNeeded()
-  const item: Incidencia = {
+function createIncidenciaLocal(data: Omit<Incidencia, 'id' | 'createdAt'>): Incidencia {
+  seedIfNeededLocal()
+  const item: Incidencia = normalizeIncidencia({
     ...data,
-    tratamiento: normalizeTratamientos(data.tratamiento),
-    tratamientoOtros: data.tratamientoOtros ?? '',
-    tratamientoOtrosHora: data.tratamientoOtrosHora ?? '',
-    tratamientoOtrosForma: data.tratamientoOtrosForma ?? '',
-    tratamientoOtrosFormaOtros: data.tratamientoOtrosFormaOtros ?? '',
-    firmaDibujo: data.firmaDibujo ?? '',
     id: uid(),
     createdAt: new Date().toISOString(),
-  }
+  })
   const existing = read<Incidencia[]>(KEYS.incidencias, [])
   write(KEYS.incidencias, [...existing, item])
   return item
+}
+
+export async function getPersonas(): Promise<Persona[]> {
+  if (isSupabaseConfigured) return getPersonasFromSupabase()
+  return getPersonasLocal()
+}
+
+export async function savePersona(
+  input: Omit<Persona, 'id' | 'createdAt'> & { id?: string },
+): Promise<Persona> {
+  if (isSupabaseConfigured) return savePersonaToSupabase(input)
+  return savePersonaLocal(input)
+}
+
+export async function deletePersona(id: string): Promise<void> {
+  if (isSupabaseConfigured) return deletePersonaFromSupabase(id)
+  deletePersonaLocal(id)
+}
+
+export async function getIncidencias(): Promise<Incidencia[]> {
+  if (isSupabaseConfigured) return getIncidenciasFromSupabase()
+  return getIncidenciasLocal()
+}
+
+export async function createIncidencia(
+  data: Omit<Incidencia, 'id' | 'createdAt'>,
+): Promise<Incidencia> {
+  if (isSupabaseConfigured) return createIncidenciaInSupabase(data)
+  return createIncidenciaLocal(data)
 }
 
 export function filterIncidencias(

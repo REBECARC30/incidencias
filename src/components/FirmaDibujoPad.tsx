@@ -7,146 +7,187 @@ interface FirmaDibujoPadProps {
   onChange: (dataUrl: string) => void
 }
 
-function getCanvasPoint(canvas: HTMLCanvasElement, clientX: number, clientY: number) {
-  const rect = canvas.getBoundingClientRect()
-  const scaleX = canvas.width / rect.width
-  const scaleY = canvas.height / rect.height
-  return {
-    x: (clientX - rect.left) * scaleX,
-    y: (clientY - rect.top) * scaleY,
-  }
-}
+const PAD_HEIGHT = 160
+const PAD_MIN_WIDTH = 280
 
 export function FirmaDibujoPad({ value, onChange }: FirmaDibujoPadProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const wrapperRef = useRef<HTMLDivElement>(null)
   const drawing = useRef(false)
   const lastPoint = useRef<{ x: number; y: number } | null>(null)
-  const loadedValue = useRef<string>('')
+  const loadedValue = useRef('')
+  const logicalSize = useRef({ width: PAD_MIN_WIDTH, height: PAD_HEIGHT })
+  const onChangeRef = useRef(onChange)
 
-  const syncCanvasSize = useCallback(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const parent = canvas.parentElement
-    if (!parent) return
+  onChangeRef.current = onChange
 
-    const width = Math.max(parent.clientWidth, 280)
-    const height = 160
-    const ratio = window.devicePixelRatio || 1
-
-    canvas.width = Math.floor(width * ratio)
-    canvas.height = Math.floor(height * ratio)
-    canvas.style.width = `${width}px`
-    canvas.style.height = `${height}px`
-
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-    ctx.setTransform(ratio, 0, 0, ratio, 0, 0)
-    ctx.lineCap = 'round'
-    ctx.lineJoin = 'round'
-    ctx.lineWidth = 2.2
-    ctx.strokeStyle = '#38092d'
-
-    ctx.fillStyle = '#ffffff'
-    ctx.fillRect(0, 0, width, height)
-
-    if (value) {
-      const img = new Image()
-      img.onload = () => {
-        ctx.drawImage(img, 0, 0, width, height)
-      }
-      img.src = value
-      loadedValue.current = value
-    } else {
-      loadedValue.current = ''
+  const getCanvasPoint = useCallback((canvas: HTMLCanvasElement, clientX: number, clientY: number) => {
+    const rect = canvas.getBoundingClientRect()
+    const { width, height } = logicalSize.current
+    return {
+      x: (clientX - rect.left) * (width / rect.width),
+      y: (clientY - rect.top) * (height / rect.height),
     }
-  }, [value])
+  }, [])
+
+  const syncCanvasSize = useCallback(
+    (imageValue = value) => {
+      const canvas = canvasRef.current
+      const wrapper = wrapperRef.current
+      if (!canvas || !wrapper) return
+
+      const width = Math.max(wrapper.clientWidth, PAD_MIN_WIDTH)
+      const height = PAD_HEIGHT
+      const ratio = window.devicePixelRatio || 1
+
+      logicalSize.current = { width, height }
+
+      canvas.width = Math.floor(width * ratio)
+      canvas.height = Math.floor(height * ratio)
+      canvas.style.width = `${width}px`
+      canvas.style.height = `${height}px`
+
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0)
+      ctx.lineCap = 'round'
+      ctx.lineJoin = 'round'
+      ctx.lineWidth = 2.5
+      ctx.strokeStyle = '#38092d'
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, width, height)
+
+      if (imageValue) {
+        const img = new Image()
+        img.onload = () => {
+          ctx.fillStyle = '#ffffff'
+          ctx.fillRect(0, 0, width, height)
+          ctx.drawImage(img, 0, 0, width, height)
+        }
+        img.src = imageValue
+        loadedValue.current = imageValue
+      } else {
+        loadedValue.current = ''
+      }
+    },
+    [value],
+  )
 
   useEffect(() => {
     syncCanvasSize()
-    window.addEventListener('resize', syncCanvasSize)
-    return () => window.removeEventListener('resize', syncCanvasSize)
+
+    const wrapper = wrapperRef.current
+    if (!wrapper) return
+
+    const observer = new ResizeObserver(() => {
+      syncCanvasSize(loadedValue.current)
+    })
+    observer.observe(wrapper)
+
+    return () => observer.disconnect()
   }, [syncCanvasSize])
 
   useEffect(() => {
     if (value === loadedValue.current) return
-    syncCanvasSize()
+    syncCanvasSize(value)
   }, [value, syncCanvasSize])
 
-  function commitStroke() {
+  useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-    onChange(canvas.toDataURL('image/png'))
-  }
 
-  function startDraw(clientX: number, clientY: number) {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    drawing.current = true
-    lastPoint.current = getCanvasPoint(canvas, clientX, clientY)
-  }
+    const commitStroke = () => {
+      const dataUrl = canvas.toDataURL('image/png')
+      loadedValue.current = dataUrl
+      onChangeRef.current(dataUrl)
+    }
 
-  function drawTo(clientX: number, clientY: number) {
-    if (!drawing.current) return
-    const canvas = canvasRef.current
-    const ctx = canvas?.getContext('2d')
-    const last = lastPoint.current
-    if (!canvas || !ctx || !last) return
+    const startDraw = (clientX: number, clientY: number) => {
+      drawing.current = true
+      lastPoint.current = getCanvasPoint(canvas, clientX, clientY)
+    }
 
-    const point = getCanvasPoint(canvas, clientX, clientY)
-    ctx.beginPath()
-    ctx.moveTo(last.x, last.y)
-    ctx.lineTo(point.x, point.y)
-    ctx.stroke()
-    lastPoint.current = point
-  }
+    const drawTo = (clientX: number, clientY: number) => {
+      if (!drawing.current) return
+      const ctx = canvas.getContext('2d')
+      const last = lastPoint.current
+      if (!ctx || !last) return
 
-  function endDraw() {
-    if (!drawing.current) return
-    drawing.current = false
-    lastPoint.current = null
-    commitStroke()
-  }
+      const point = getCanvasPoint(canvas, clientX, clientY)
+      ctx.beginPath()
+      ctx.moveTo(last.x, last.y)
+      ctx.lineTo(point.x, point.y)
+      ctx.stroke()
+      lastPoint.current = point
+    }
+
+    const endDraw = () => {
+      if (!drawing.current) return
+      drawing.current = false
+      lastPoint.current = null
+      commitStroke()
+    }
+
+    const onPointerDown = (e: PointerEvent) => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return
+      e.preventDefault()
+      canvas.setPointerCapture(e.pointerId)
+      startDraw(e.clientX, e.clientY)
+    }
+
+    const onPointerMove = (e: PointerEvent) => {
+      if (!drawing.current) return
+      e.preventDefault()
+      drawTo(e.clientX, e.clientY)
+    }
+
+    const endPointer = (e: PointerEvent) => {
+      if (!drawing.current) return
+      e.preventDefault()
+      if (canvas.hasPointerCapture(e.pointerId)) {
+        canvas.releasePointerCapture(e.pointerId)
+      }
+      endDraw()
+    }
+
+    canvas.addEventListener('pointerdown', onPointerDown, { passive: false })
+    canvas.addEventListener('pointermove', onPointerMove, { passive: false })
+    canvas.addEventListener('pointerup', endPointer, { passive: false })
+    canvas.addEventListener('pointercancel', endPointer, { passive: false })
+
+    return () => {
+      canvas.removeEventListener('pointerdown', onPointerDown)
+      canvas.removeEventListener('pointermove', onPointerMove)
+      canvas.removeEventListener('pointerup', endPointer)
+      canvas.removeEventListener('pointercancel', endPointer)
+    }
+  }, [getCanvasPoint])
 
   function clear() {
     const canvas = canvasRef.current
     const ctx = canvas?.getContext('2d')
     if (!canvas || !ctx) return
 
-    const width = canvas.width / (window.devicePixelRatio || 1)
-    const height = canvas.height / (window.devicePixelRatio || 1)
+    const { width, height } = logicalSize.current
     ctx.fillStyle = '#ffffff'
     ctx.fillRect(0, 0, width, height)
     loadedValue.current = ''
-    onChange('')
+    onChangeRef.current('')
   }
 
   return (
     <div className="space-y-2">
-      <div className="overflow-hidden rounded-2xl border-2 border-dashed border-brand-200/80 bg-white shadow-inner">
+      <div
+        ref={wrapperRef}
+        className="overflow-hidden rounded-2xl border-2 border-dashed border-brand-200/80 bg-white shadow-inner"
+        style={{ touchAction: 'none' }}
+      >
         <canvas
           ref={canvasRef}
-          className="block w-full touch-none cursor-crosshair"
+          className="block w-full cursor-crosshair"
+          style={{ touchAction: 'none' }}
           aria-label="Dibujar firma"
-          onMouseDown={(e) => startDraw(e.clientX, e.clientY)}
-          onMouseMove={(e) => drawTo(e.clientX, e.clientY)}
-          onMouseUp={endDraw}
-          onMouseLeave={endDraw}
-          onTouchStart={(e) => {
-            const touch = e.touches[0]
-            if (!touch) return
-            e.preventDefault()
-            startDraw(touch.clientX, touch.clientY)
-          }}
-          onTouchMove={(e) => {
-            const touch = e.touches[0]
-            if (!touch) return
-            e.preventDefault()
-            drawTo(touch.clientX, touch.clientY)
-          }}
-          onTouchEnd={(e) => {
-            e.preventDefault()
-            endDraw()
-          }}
         />
       </div>
       <div className="flex items-center justify-between gap-2">

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Check, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
@@ -11,7 +11,8 @@ import {
 import { formatUbicacion } from '../lib/habitaciones'
 import { formatTratamientos } from '../lib/tratamientos'
 import { GLOSARIO_DIETAS, GLOSARIO_PROCESOS } from '../lib/glosarioDietasTratamientos'
-import { createIncidencia, getPersonas } from '../lib/storage'
+import { createIncidencia } from '../lib/storage'
+import { usePersonas } from '../hooks/useStorageData'
 import { EstadosSelector } from '../components/EstadosSelector'
 import { GlosarioSelector } from '../components/GlosarioSelector'
 import { PersonaSelect } from '../components/PersonaSelect'
@@ -128,10 +129,12 @@ function Checkbox({
 export function NuevaIncidenciaPage() {
   const { session } = useAuth()
   const navigate = useNavigate()
-  const personas = useMemo(() => getPersonas(), [])
+  const { personas } = usePersonas()
   const [step, setStep] = useState(0)
   const [form, setForm] = useState<FormState>(initialForm)
   const [success, setSuccess] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   const selectedPersona = personas.find((p) => p.id === form.personaId)
 
@@ -167,11 +170,13 @@ export function NuevaIncidenciaPage() {
   }
 
   function submit() {
-    if (!session) return
+    if (!session || saving) return
     blurActiveField()
     if (!confirmarSiHayVacios(form)) return
 
-    createIncidencia({
+    setSaving(true)
+    setSaveError('')
+    void createIncidencia({
       ...form,
       incidencia: form.incidencia.trim(),
       lesiones: form.lesiones.trim(),
@@ -189,7 +194,11 @@ export function NuevaIncidenciaPage() {
       firmaDibujo: form.firmaDibujo,
       createdBy: session.workerId,
     })
-    setSuccess(true)
+      .then(() => setSuccess(true))
+      .catch((err) => {
+        setSaveError(err instanceof Error ? err.message : 'Error al guardar la incidencia')
+      })
+      .finally(() => setSaving(false))
   }
 
   function irAListadoTratamientos() {
@@ -247,7 +256,7 @@ export function NuevaIncidenciaPage() {
 
             {selectedPersona && (
               <div className="rounded-2xl border border-brand-200/60 bg-gradient-to-br from-brand-50 to-brand-100/50 px-4 py-3.5 text-sm shadow-sm">
-                <span className="font-bold text-brand-900">{selectedPersona.nombre}</span>
+                <span className="font-bold text-brand-900">{selectedPersona.codigo}</span>
                 <span className="font-medium text-brand-700/80">
                   {' '}
                   · {formatUbicacion(selectedPersona.ala, selectedPersona.habitacion)}
@@ -517,6 +526,11 @@ export function NuevaIncidenciaPage() {
         </div>
 
         <div className="mt-8 flex flex-wrap gap-2 border-t border-slate-100 pt-6">
+          {saveError && (
+            <p className="mb-2 w-full rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">
+              {saveError}
+            </p>
+          )}
           {step > 0 && (
             <Button variant="secondary" onClick={prev}>
               <ChevronLeft size={16} />
@@ -530,14 +544,17 @@ export function NuevaIncidenciaPage() {
               <ChevronRight size={16} />
             </Button>
           ) : (
-            <Button onClick={submit}>Registrar incidencia</Button>
+            <Button onClick={submit} disabled={saving}>
+              {saving ? 'Guardando…' : 'Registrar incidencia'}
+            </Button>
           )}
         </div>
       </Card>
 
       <Callout title="Recordatorio" tone="warn" className="mt-5 max-w-2xl">
         Ningún campo es obligatorio. Al registrar, la app te avisará si falta algo. Escribe con
-        claridad y sin juicios de valor sobre las personas atendidas.
+        claridad y sin juicios de valor. No incluyas el nombre del paciente en ningún campo de
+        texto (incidencia, observaciones, lesiones, etc.): identifica solo con el código.
       </Callout>
     </div>
   )

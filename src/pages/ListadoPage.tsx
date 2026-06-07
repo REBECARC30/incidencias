@@ -27,7 +27,8 @@ import { PersonaSelect } from '../components/PersonaSelect'
 import { TratamientoFilter } from '../components/TratamientoFilter'
 import { PrioridadBadge } from '../components/PrioridadTags'
 import { exportIncidenciasExcel, exportIncidenciasPdf } from '../lib/export'
-import { filterIncidencias, getIncidencias, getPersonas } from '../lib/storage'
+import { filterIncidencias } from '../lib/storage'
+import { useIncidencias, usePersonas } from '../hooks/useStorageData'
 import {
   Badge,
   Button,
@@ -98,7 +99,7 @@ function IncidenciaCard({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-semibold text-slate-900">
-              {persona ? `${persona.codigo} · ${persona.nombre}` : 'Persona desconocida'}
+              {persona ? persona.codigo : 'Persona desconocida'}
             </span>
             <Badge tone="brand">
               {formatDate(item.fecha)} · {turnoLabel(item.turno)}
@@ -144,8 +145,9 @@ export function ListadoPage() {
   const campo = meta.campo
 
   const [refreshKey, setRefreshKey] = useState(0)
-  const personas = useMemo(() => getPersonas(), [refreshKey])
-  const allIncidencias = useMemo(() => getIncidencias(), [refreshKey])
+  const { personas, loading: loadingPersonas, error: personasError } = usePersonas(refreshKey)
+  const { incidencias: allIncidencias, loading: loadingIncidencias, error: incidenciasError } =
+    useIncidencias(refreshKey)
   const [filters, setFilters] = useState<IncidenciaFilters>(emptyFilters)
   const [concepto, setConcepto] = useState('')
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -211,8 +213,21 @@ export function ListadoPage() {
 
   const showTratamientoFilter = tipo === 'general' || tipo === 'tratamientos'
 
+  if (loadingPersonas || loadingIncidencias) {
+    return (
+      <div className="grid min-h-[40vh] place-items-center text-sm text-slate-500">
+        Cargando registros…
+      </div>
+    )
+  }
+
+  const loadError = personasError || incidenciasError
+
   return (
     <div>
+      {loadError && (
+        <p className="mb-4 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{loadError}</p>
+      )}
       <PageHeader
         title={meta.title}
         subtitle={`${filtered.length} registro${filtered.length === 1 ? '' : 's'} · solo lectura`}

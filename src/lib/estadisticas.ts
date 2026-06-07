@@ -181,7 +181,7 @@ export function calcularEstadisticas(
     .map(([id, count]) => {
       const p = personaMap.get(id)
       return {
-        label: p ? `${p.codigo} · ${p.nombre}` : 'Persona desconocida',
+        label: p ? p.codigo : 'Persona desconocida',
         count,
         pct: pct(count, total),
       }

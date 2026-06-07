@@ -1,6 +1,6 @@
 import type { Ala } from '../types'
 import { ALAS, groupPersonasPorAla } from '../lib/habitaciones'
-import { getPersonas } from '../lib/storage'
+import { usePersonas } from '../hooks/useStorageData'
 import { selectClass } from './ui'
 
 interface PersonaSelectProps {
@@ -18,7 +18,8 @@ export function PersonaSelect({
   className = selectClass,
   alaFilter = '',
 }: PersonaSelectProps) {
-  const personas = getPersonas()
+  const { personas } = usePersonas()
+
   const porAla = groupPersonasPorAla(personas)
   const alas = alaFilter ? ALAS.filter((a) => a.id === alaFilter) : ALAS
 
@@ -33,7 +34,7 @@ export function PersonaSelect({
           <optgroup key={id} label={label}>
             {lista.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.codigo} · {p.nombre} · Hab. {p.habitacion}
+                {p.codigo} · Hab. {p.habitacion}
               </option>
             ))}
           </optgroup>

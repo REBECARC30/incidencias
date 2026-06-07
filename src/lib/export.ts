@@ -28,7 +28,6 @@ export function exportIncidenciasExcel(
       Fecha: formatDate(item.fecha),
       Turno: item.turno,
       Código: p?.codigo ?? '',
-      Nombre: p?.nombre ?? '',
       Ala: p ? alaLabel(p.ala) : '',
       Habitación: p?.habitacion ?? '',
       DE: item.de,
@@ -90,7 +89,7 @@ export function exportIncidenciasPdf(
     const p = personaById(personas, item.personaId)
     return [
       `${formatDate(item.fecha)} ${item.turno}`,
-      p ? `${p.codigo} · ${p.nombre}` : '—',
+      p?.codigo ?? '—',
       p ? `${alaLabel(p.ala)} · ${p.habitacion}` : '—',
       `${item.de} → ${item.a}`,
       formatEstados(item.estado) + (item.estadoOtros.trim() ? ` · Otros: ${item.estadoOtros.trim()}` : ''),
@@ -119,7 +118,7 @@ export function exportIncidenciasPdf(
     startY: 24,
     head: [[
       'Fecha/T',
-      'Persona',
+      'Código',
       'Hab.',
       'DE→A',
       'Estado',

@@ -6,5 +6,11 @@ const key = import.meta.env.VITE_SUPABASE_ANON_KEY
 export const isSupabaseConfigured = Boolean(url && key && !url.includes('tu-proyecto'))
 
 export const supabase: SupabaseClient | null = isSupabaseConfigured
-  ? createClient(url!, key!)
+  ? createClient(url!, key!, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+      },
+    })
   : null

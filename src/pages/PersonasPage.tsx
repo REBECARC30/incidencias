@@ -2,18 +2,18 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { Pencil, Plus, Trash2, UserRound } from 'lucide-react'
 import type { Ala, Persona } from '../types'
 import { ALAS, formatUbicacion, groupPersonasPorAla } from '../lib/habitaciones'
-import { deletePersona, getPersonas, savePersona } from '../lib/storage'
+import { deletePersona, savePersona } from '../lib/storage'
+import { usePersonas } from '../hooks/useStorageData'
 import { Button, Card, EmptyState, Field, PageHeader, SectionTitle, inputClass, selectClass } from '../components/ui'
 
 type FormData = {
   id?: string
   codigo: string
-  nombre: string
   ala: Ala
   habitacion: string
 }
 
-const emptyForm = (): FormData => ({ codigo: '', nombre: '', ala: '1', habitacion: '' })
+const emptyForm = (): FormData => ({ codigo: '', ala: '1', habitacion: '' })
 
 function PersonasAlaTable({
   personas,
@@ -31,7 +31,6 @@ function PersonasAlaTable({
           <thead className="bg-gradient-to-r from-brand-50/80 to-brand-100/30 text-xs uppercase tracking-widest text-brand-600">
             <tr>
               <th className="px-4 py-3 font-medium">Código</th>
-              <th className="px-4 py-3 font-medium">Nombre</th>
               <th className="px-4 py-3 font-medium">Hab.</th>
               <th className="px-4 py-3 font-medium text-right">Acciones</th>
             </tr>
@@ -39,11 +38,10 @@ function PersonasAlaTable({
           <tbody className="divide-y divide-slate-100">
             {personas.map((p) => (
               <tr key={p.id} className="transition-colors hover:bg-brand-50/50">
-                <td className="px-4 py-3 font-medium text-brand-800">{p.codigo}</td>
-                <td className="px-4 py-3 text-slate-800">
+                <td className="px-4 py-3 font-medium text-brand-800">
                   <span className="inline-flex items-center gap-2">
                     <UserRound size={14} className="text-slate-400" />
-                    {p.nombre}
+                    {p.codigo}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-slate-600">{p.habitacion}</td>
@@ -73,10 +71,7 @@ function PersonasAlaTable({
 
 export function PersonasPage() {
   const [refresh, setRefresh] = useState(0)
-  const personas = useMemo(() => {
-    void refresh
-    return getPersonas()
-  }, [refresh])
+  const { personas, loading, error: loadError } = usePersonas(refresh)
   const porAla = useMemo(() => groupPersonasPorAla(personas), [personas])
   const [form, setForm] = useState<FormData>(emptyForm)
   const [error, setError] = useState('')
@@ -90,7 +85,6 @@ export function PersonasPage() {
     setForm({
       id: p.id,
       codigo: p.codigo,
-      nombre: p.nombre,
       ala: p.ala,
       habitacion: p.habitacion,
     })
@@ -107,27 +101,39 @@ export function PersonasPage() {
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError('')
-    try {
-      savePersona(form)
-      cancelEdit()
-      reload()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al guardar')
-    }
+    void savePersona(form)
+      .then(() => {
+        cancelEdit()
+        reload()
+      })
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : 'Error al guardar')
+      })
   }
 
   function handleDelete(id: string, codigo: string) {
     if (!confirm(`¿Eliminar a ${codigo}? No se borran incidencias ya registradas.`)) return
-    deletePersona(id)
-    reload()
+    void deletePersona(id).then(reload)
+  }
+
+  if (loading && !personas.length) {
+    return (
+      <div className="grid min-h-[40vh] place-items-center text-sm text-slate-500">
+        Cargando personas…
+      </div>
+    )
   }
 
   return (
     <div>
       <PageHeader
         title="Personas atendidas"
-        subtitle="Organizadas por Ala 1 y Ala 2 · código para el desplegable al registrar"
+        subtitle="Organizadas por Ala 1 y Ala 2 · solo código (sin nombre del paciente)"
       />
+
+      {loadError && (
+        <p className="mb-4 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{loadError}</p>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-5">
         <Card className="lg:col-span-2 animate-fade-up shadow-[var(--shadow-float)]">
@@ -139,21 +145,13 @@ export function PersonasPage() {
           </h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <Field label="Código" required hint="Identificador en el desplegable (ej. P006)">
+            <Field label="Código" required hint="Identificador anónimo (ej. P006). No uses el nombre del paciente.">
               <input
                 className={inputClass}
                 value={form.codigo}
                 onChange={(e) => setForm((f) => ({ ...f, codigo: e.target.value.toUpperCase() }))}
                 required
                 disabled={editing}
-              />
-            </Field>
-            <Field label="Nombre y apellidos" required>
-              <input
-                className={inputClass}
-                value={form.nombre}
-                onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
-                required
               />
             </Field>
             <Field label="Ala" required>
@@ -204,7 +202,7 @@ export function PersonasPage() {
           {!personas.length ? (
             <EmptyState
               title="Sin personas registradas"
-              description="Añade la primera persona con su código, ala y habitación."
+              description="Añade la primera persona con su código, ala y habitación (sin nombre)."
             />
           ) : (
             ALAS.map(({ id, label }) => {
