@@ -4,6 +4,7 @@ import { GLOSARIO_TRATAMIENTOS } from '../lib/glosarioDietasTratamientos'
 import type { FormaAdministracion, TratamientoRegistro } from '../types'
 import {
   FORMAS_ADMINISTRACION,
+  MAX_TRATAMIENTO_HORAS,
   syncTratamientos,
 } from '../lib/tratamientos'
 import { GlosarioSelector } from './GlosarioSelector'
@@ -19,39 +20,73 @@ interface TratamientosEditorProps {
   ) => void
   otro: string
   onOtroChange: (value: string) => void
-  otroHora: string
-  onOtroHoraChange: (value: string) => void
+  otroHoras: string[]
+  onOtroHorasChange: (value: string[]) => void
   otroForma: FormaAdministracion
   onOtroFormaChange: (value: FormaAdministracion) => void
   otroFormaOtros: string
   onOtroFormaOtrosChange: (value: string) => void
 }
 
+function HorasInputs({
+  horas,
+  onChange,
+}: {
+  horas: string[]
+  onChange: (horas: string[]) => void
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {Array.from({ length: MAX_TRATAMIENTO_HORAS }, (_, index) => (
+        <input
+          key={index}
+          type="time"
+          className={inputClass}
+          value={horas[index] ?? ''}
+          aria-label={`Hora ${index + 1}`}
+          onChange={(e) => {
+            const next = [...horas]
+            next[index] = e.target.value
+            onChange(next)
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
 function RegistroFila({
   titulo,
-  hora,
+  farmaco,
+  horas,
   forma,
   formaOtros,
   onPatch,
 }: {
   titulo: string
-  hora: string
+  farmaco: string
+  horas: string[]
   forma: FormaAdministracion
   formaOtros: string
-  onPatch: (patch: Partial<Pick<TratamientoRegistro, 'hora' | 'forma' | 'formaOtros'>>) => void
+  onPatch: (patch: Partial<Pick<TratamientoRegistro, 'farmaco' | 'horas' | 'forma' | 'formaOtros'>>) => void
 }) {
   return (
-    <tr className="border-t border-slate-100">
-      <td className="px-3 py-2.5 align-top text-sm font-medium text-slate-800">{titulo}</td>
-      <td className="px-3 py-2.5 align-top">
+    <tr className="border-t border-slate-100 align-top">
+      <td className="px-3 py-2.5">
+        <p className="text-sm font-medium text-slate-800">{titulo}</p>
+      </td>
+      <td className="px-3 py-2.5">
         <input
-          type="time"
           className={inputClass}
-          value={hora}
-          onChange={(e) => onPatch({ hora: e.target.value })}
+          value={farmaco}
+          placeholder="Tipo de fármaco…"
+          onChange={(e) => onPatch({ farmaco: e.target.value })}
         />
       </td>
-      <td className="px-3 py-2.5 align-top">
+      <td className="px-3 py-2.5">
+        <HorasInputs horas={horas} onChange={(next) => onPatch({ horas: next })} />
+      </td>
+      <td className="px-3 py-2.5">
         <select
           className={selectClass}
           value={forma}
@@ -141,8 +176,8 @@ export function TratamientosEditor({
   onChange,
   otro,
   onOtroChange,
-  otroHora,
-  onOtroHoraChange,
+  otroHoras,
+  onOtroHorasChange,
   otroForma,
   onOtroFormaChange,
   otroFormaOtros,
@@ -182,11 +217,12 @@ export function TratamientosEditor({
       {value.length > 0 && (
         <TablaAdministracion titulo="Hora y forma de administración" onListo={() => {}}>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[520px] text-left text-sm">
+            <table className="w-full min-w-[640px] text-left text-sm">
               <thead className="bg-slate-50/80 text-xs uppercase tracking-widest text-slate-500">
                 <tr>
                   <th className="px-3 py-2 font-medium">Tratamiento</th>
-                  <th className="px-3 py-2 font-medium w-36">Hora</th>
+                  <th className="px-3 py-2 font-medium min-w-[160px]">Fármaco</th>
+                  <th className="px-3 py-2 font-medium min-w-[220px]">Horas (hasta 4)</th>
                   <th className="px-3 py-2 font-medium">Forma</th>
                 </tr>
               </thead>
@@ -195,7 +231,8 @@ export function TratamientosEditor({
                   <RegistroFila
                     key={registro.nombre}
                     titulo={registro.nombre}
-                    hora={registro.hora}
+                    farmaco={registro.farmaco}
+                    horas={registro.horas}
                     forma={registro.forma}
                     formaOtros={registro.formaOtros}
                     onPatch={(patch) => patchRegistro(index, patch)}
@@ -213,26 +250,46 @@ export function TratamientosEditor({
         <TablaAdministracion titulo="Hora y forma — Otros" onListo={() => {}}>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[520px] text-left text-sm">
+              <thead className="bg-slate-50/80 text-xs uppercase tracking-widest text-slate-500">
+                <tr>
+                  <th className="px-3 py-2 font-medium">Tratamiento</th>
+                  <th className="px-3 py-2 font-medium min-w-[220px]">Horas (hasta 4)</th>
+                  <th className="px-3 py-2 font-medium">Forma</th>
+                </tr>
+              </thead>
               <tbody>
-                <RegistroFila
-                  titulo={otro.trim()}
-                  hora={otroHora}
-                  forma={otroForma}
-                  formaOtros={otroFormaOtros}
-                  onPatch={(patch) => {
-                    if (patch.hora !== undefined) onOtroHoraChange(patch.hora)
-                    if (patch.forma !== undefined) {
-                      onOtroFormaChange(patch.forma)
-                      if (patch.formaOtros !== undefined) {
-                        onOtroFormaOtrosChange(patch.formaOtros)
-                      } else if (patch.forma !== 'otra') {
-                        onOtroFormaOtrosChange('')
-                      }
-                    } else if (patch.formaOtros !== undefined) {
-                      onOtroFormaOtrosChange(patch.formaOtros)
-                    }
-                  }}
-                />
+                <tr className="border-t border-slate-100 align-top">
+                  <td className="px-3 py-2.5 text-sm font-medium text-slate-800">{otro.trim()}</td>
+                  <td className="px-3 py-2.5">
+                    <HorasInputs horas={otroHoras} onChange={onOtroHorasChange} />
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <select
+                      className={selectClass}
+                      value={otroForma}
+                      onChange={(e) => {
+                        const next = e.target.value as FormaAdministracion
+                        onOtroFormaChange(next)
+                        if (next !== 'otra') onOtroFormaOtrosChange('')
+                      }}
+                    >
+                      <option value="">— Forma —</option>
+                      {FORMAS_ADMINISTRACION.map((f) => (
+                        <option key={f.id} value={f.id}>
+                          {f.label}
+                        </option>
+                      ))}
+                    </select>
+                    {otroForma === 'otra' && (
+                      <input
+                        className={`${inputClass} mt-2`}
+                        placeholder="Especificar forma…"
+                        value={otroFormaOtros}
+                        onChange={(e) => onOtroFormaOtrosChange(e.target.value)}
+                      />
+                    )}
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>

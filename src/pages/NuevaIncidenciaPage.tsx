@@ -9,7 +9,7 @@ import {
   todayISO,
 } from '../lib/constants'
 import { formatUbicacion } from '../lib/habitaciones'
-import { formatTratamientos } from '../lib/tratamientos'
+import { formatTratamientos, emptyHoras } from '../lib/tratamientos'
 import { GLOSARIO_DIETAS, GLOSARIO_PROCESOS } from '../lib/glosarioDietasTratamientos'
 import { createIncidencia } from '../lib/storage'
 import { usePersonas } from '../hooks/useStorageData'
@@ -19,6 +19,7 @@ import { PersonaSelect } from '../components/PersonaSelect'
 import { TratamientosEditor } from '../components/TratamientosEditor'
 import { PrioridadTags } from '../components/PrioridadTags'
 import { FirmaDibujoPad } from '../components/FirmaDibujoPad'
+import { ApartadoFecha } from '../components/ApartadoFecha'
 import { Button, Callout, Card, Field, PageHeader, WizardSteps, inputClass, selectClass } from '../components/ui'
 
 const STEPS = [
@@ -48,13 +49,16 @@ const initialForm = (): FormState => ({
   hospitalRegr: false,
   dieta: [],
   dietaOtros: '',
+  dietaFecha: '',
   tratamiento: [],
   tratamientoOtros: '',
-  tratamientoOtrosHora: '',
+  tratamientoFecha: '',
+  tratamientoOtrosHoras: emptyHoras(),
   tratamientoOtrosForma: '',
   tratamientoOtrosFormaOtros: '',
   proceso: [],
   procesoOtros: '',
+  procesoFecha: '',
   desde: '',
   hasta: '',
   ctesP: '',
@@ -185,7 +189,7 @@ export function NuevaIncidenciaPage() {
       dietaOtros: form.dietaOtros.trim(),
       tratamiento: form.tratamiento,
       tratamientoOtros: form.tratamientoOtros.trim(),
-      tratamientoOtrosHora: form.tratamientoOtrosHora,
+      tratamientoOtrosHoras: form.tratamientoOtrosHoras,
       tratamientoOtrosForma: form.tratamientoOtrosForma,
       tratamientoOtrosFormaOtros: form.tratamientoOtrosFormaOtros.trim(),
       proceso: form.proceso,
@@ -394,47 +398,59 @@ export function NuevaIncidenciaPage() {
 
         <div className={step === 3 ? 'space-y-4' : 'hidden'}>
             <Field label="Dieta" hint="Selecciona del listado. Puedes marcar varias.">
-              <GlosarioSelector
-                grupos={GLOSARIO_DIETAS}
-                value={form.dieta}
-                onChange={(dieta) => patch('dieta', dieta)}
-                searchId="dieta-search"
-                emptyLabel="Ninguna dieta seleccionada."
-                selectedLabel="Dietas"
-                otro={form.dietaOtros}
-                onOtroChange={(v) => patch('dietaOtros', v)}
-              />
+              <div className="space-y-3">
+                <ApartadoFecha value={form.dietaFecha} onChange={(v) => patch('dietaFecha', v)} />
+                <GlosarioSelector
+                  grupos={GLOSARIO_DIETAS}
+                  value={form.dieta}
+                  onChange={(dieta) => patch('dieta', dieta)}
+                  searchId="dieta-search"
+                  emptyLabel="Ninguna dieta seleccionada."
+                  selectedLabel="Dietas"
+                  otro={form.dietaOtros}
+                  onOtroChange={(v) => patch('dietaOtros', v)}
+                />
+              </div>
             </Field>
 
             <Field
               label="Tratamiento"
               hint="Indica hora y forma de administración de cada uno."
             >
-              <TratamientosEditor
-                value={form.tratamiento}
-                onChange={patchTratamiento}
-                otro={form.tratamientoOtros}
-                onOtroChange={(v) => patch('tratamientoOtros', v)}
-                otroHora={form.tratamientoOtrosHora}
-                onOtroHoraChange={(v) => patch('tratamientoOtrosHora', v)}
-                otroForma={form.tratamientoOtrosForma}
-                onOtroFormaChange={(v) => patch('tratamientoOtrosForma', v)}
-                otroFormaOtros={form.tratamientoOtrosFormaOtros}
-                onOtroFormaOtrosChange={(v) => patch('tratamientoOtrosFormaOtros', v)}
-              />
+              <div className="space-y-3">
+                <ApartadoFecha
+                  value={form.tratamientoFecha}
+                  onChange={(v) => patch('tratamientoFecha', v)}
+                />
+                <TratamientosEditor
+                  value={form.tratamiento}
+                  onChange={patchTratamiento}
+                  otro={form.tratamientoOtros}
+                  onOtroChange={(v) => patch('tratamientoOtros', v)}
+                  otroHoras={form.tratamientoOtrosHoras}
+                  onOtroHorasChange={(v) => patch('tratamientoOtrosHoras', v)}
+                  otroForma={form.tratamientoOtrosForma}
+                  onOtroFormaChange={(v) => patch('tratamientoOtrosForma', v)}
+                  otroFormaOtros={form.tratamientoOtrosFormaOtros}
+                  onOtroFormaOtrosChange={(v) => patch('tratamientoOtrosFormaOtros', v)}
+                />
+              </div>
             </Field>
 
             <Field label="Proceso" hint="Controles, muestras y actuaciones del plan de cuidados.">
-              <GlosarioSelector
-                grupos={GLOSARIO_PROCESOS}
-                value={form.proceso}
-                onChange={(proceso) => patch('proceso', proceso)}
-                searchId="proceso-search"
-                emptyLabel="Ningún proceso seleccionado."
-                selectedLabel="Procesos"
-                otro={form.procesoOtros}
-                onOtroChange={(v) => patch('procesoOtros', v)}
-              />
+              <div className="space-y-3">
+                <ApartadoFecha value={form.procesoFecha} onChange={(v) => patch('procesoFecha', v)} />
+                <GlosarioSelector
+                  grupos={GLOSARIO_PROCESOS}
+                  value={form.proceso}
+                  onChange={(proceso) => patch('proceso', proceso)}
+                  searchId="proceso-search"
+                  emptyLabel="Ningún proceso seleccionado."
+                  selectedLabel="Procesos"
+                  otro={form.procesoOtros}
+                  onOtroChange={(v) => patch('procesoOtros', v)}
+                />
+              </div>
             </Field>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -467,7 +483,7 @@ export function NuevaIncidenciaPage() {
                 {formatTratamientos(
                   form.tratamiento,
                   form.tratamientoOtros,
-                  form.tratamientoOtrosHora,
+                  form.tratamientoOtrosHoras,
                   form.tratamientoOtrosForma,
                   form.tratamientoOtrosFormaOtros,
                 ) || '—'}
@@ -513,7 +529,7 @@ export function NuevaIncidenciaPage() {
                 className={inputClass}
                 value={form.firma}
                 onChange={(e) => patch('firma', e.target.value)}
-                placeholder="Nombre y apellidos"
+                placeholder="Nombre"
               />
             </Field>
 

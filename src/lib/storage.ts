@@ -3,7 +3,7 @@ import { normalizeEstados } from './estados'
 import { normalizePersona } from './habitaciones'
 import { formatListaConOtros, normalizeLista } from './listas'
 import { matchesIncidenciaFechaFilter } from './dates'
-import { formatTratamientos, normalizeTratamientos } from './tratamientos'
+import { formatTratamientos, normalizeHoras, normalizeTratamientos } from './tratamientos'
 import { isSupabaseConfigured } from './supabase'
 import {
   createIncidenciaInSupabase,
@@ -69,13 +69,19 @@ function normalizeIncidencia(item: Incidencia): Incidencia {
     prioridad: item.prioridad ?? '',
     dieta: normalizeLista(item.dieta as string | string[]),
     dietaOtros: item.dietaOtros ?? '',
+    dietaFecha: item.dietaFecha ?? '',
     tratamiento: normalizeTratamientos(item.tratamiento),
     tratamientoOtros: item.tratamientoOtros ?? '',
-    tratamientoOtrosHora: item.tratamientoOtrosHora ?? '',
+    tratamientoFecha: item.tratamientoFecha ?? '',
+    tratamientoOtrosHoras: normalizeHoras(
+      item.tratamientoOtrosHoras,
+      (item as { tratamientoOtrosHora?: string }).tratamientoOtrosHora,
+    ),
     tratamientoOtrosForma: item.tratamientoOtrosForma ?? '',
     tratamientoOtrosFormaOtros: item.tratamientoOtrosFormaOtros ?? '',
     proceso: normalizeLista(item.proceso as string | string[]),
     procesoOtros: item.procesoOtros ?? '',
+    procesoFecha: item.procesoFecha ?? '',
     firmaDibujo: item.firmaDibujo ?? '',
   }
 }
@@ -204,9 +210,10 @@ export function filterIncidencias(
       formatTratamientos(
         item.tratamiento,
         item.tratamientoOtros,
-        item.tratamientoOtrosHora,
+        item.tratamientoOtrosHoras,
         item.tratamientoOtrosForma,
         item.tratamientoOtrosFormaOtros,
+        (item as { tratamientoOtrosHora?: string }).tratamientoOtrosHora,
       ),
       formatListaConOtros(item.proceso, item.procesoOtros),
       item.observaciones,

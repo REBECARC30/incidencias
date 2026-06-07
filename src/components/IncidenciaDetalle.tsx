@@ -3,7 +3,7 @@ import { formatDate } from '../lib/constants'
 import { formatUbicacion } from '../lib/habitaciones'
 import { formatListaConOtros } from '../lib/listas'
 import { prioridadLabel } from '../lib/prioridades'
-import { formaAdministracionLabel } from '../lib/tratamientos'
+import { formaAdministracionLabel, horasActivas, normalizeHoras } from '../lib/tratamientos'
 
 interface IncidenciaDetalleProps {
   item: Incidencia
@@ -43,18 +43,31 @@ export function IncidenciaDetalle({ item, persona }: IncidenciaDetalleProps) {
       </div>
       <div>
         <dt className="text-xs text-slate-500">Dieta</dt>
-        <dd>{formatListaConOtros(item.dieta, item.dietaOtros) || '—'}</dd>
+        <dd>
+          {item.dietaFecha && (
+            <span className="mr-2 text-xs font-medium text-slate-500">
+              {formatDate(item.dietaFecha)} ·
+            </span>
+          )}
+          {formatListaConOtros(item.dieta, item.dietaOtros) || '—'}
+        </dd>
       </div>
       <div className="sm:col-span-2">
         <dt className="text-xs text-slate-500">Tratamiento</dt>
         <dd className="mt-1">
+          {item.tratamientoFecha && (
+            <p className="mb-1 text-xs font-medium text-slate-500">
+              Fecha: {formatDate(item.tratamientoFecha)}
+            </p>
+          )}
           {item.tratamiento.length || item.tratamientoOtros.trim() ? (
             <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
               <table className="w-full min-w-[420px] text-sm">
                 <thead className="bg-slate-50 text-xs text-slate-500">
                   <tr>
                     <th className="px-3 py-2 text-left font-medium">Tratamiento</th>
-                    <th className="px-3 py-2 text-left font-medium">Hora</th>
+                    <th className="px-3 py-2 text-left font-medium">Fármaco</th>
+                    <th className="px-3 py-2 text-left font-medium">Horas</th>
                     <th className="px-3 py-2 text-left font-medium">Forma</th>
                   </tr>
                 </thead>
@@ -62,7 +75,10 @@ export function IncidenciaDetalle({ item, persona }: IncidenciaDetalleProps) {
                   {item.tratamiento.map((t) => (
                     <tr key={t.nombre} className="border-t border-slate-100">
                       <td className="px-3 py-2">{t.nombre}</td>
-                      <td className="px-3 py-2">{t.hora || '—'}</td>
+                      <td className="px-3 py-2">{t.farmaco.trim() || '—'}</td>
+                      <td className="px-3 py-2">
+                        {horasActivas(t.horas).join(', ') || '—'}
+                      </td>
                       <td className="px-3 py-2">
                         {formaAdministracionLabel(t.forma, t.formaOtros) || '—'}
                       </td>
@@ -71,7 +87,15 @@ export function IncidenciaDetalle({ item, persona }: IncidenciaDetalleProps) {
                   {item.tratamientoOtros.trim() && (
                     <tr className="border-t border-slate-100">
                       <td className="px-3 py-2">Otros: {item.tratamientoOtros.trim()}</td>
-                      <td className="px-3 py-2">{item.tratamientoOtrosHora || '—'}</td>
+                      <td className="px-3 py-2">—</td>
+                      <td className="px-3 py-2">
+                        {horasActivas(
+                          normalizeHoras(
+                            item.tratamientoOtrosHoras,
+                            (item as { tratamientoOtrosHora?: string }).tratamientoOtrosHora,
+                          ),
+                        ).join(', ') || '—'}
+                      </td>
                       <td className="px-3 py-2">
                         {formaAdministracionLabel(
                           item.tratamientoOtrosForma,
@@ -90,7 +114,14 @@ export function IncidenciaDetalle({ item, persona }: IncidenciaDetalleProps) {
       </div>
       <div className="sm:col-span-2">
         <dt className="text-xs text-slate-500">Proceso</dt>
-        <dd>{formatListaConOtros(item.proceso, item.procesoOtros) || '—'}</dd>
+        <dd>
+          {item.procesoFecha && (
+            <span className="mr-2 text-xs font-medium text-slate-500">
+              {formatDate(item.procesoFecha)} ·
+            </span>
+          )}
+          {formatListaConOtros(item.proceso, item.procesoOtros) || '—'}
+        </dd>
       </div>
       <div>
         <dt className="text-xs text-slate-500">Constantes</dt>

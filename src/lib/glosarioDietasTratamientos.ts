@@ -128,8 +128,13 @@ export const GLOSARIO_PROCESOS: GlosarioGrupo[] = [
     items: [
       {
         nombre: 'TIRA DE ORINA +',
-        significado: 'Resultado positivo en tira reactiva de orina.',
+        significado: 'Registro de tira reactiva de orina.',
         ejemplos: 'Comunicar a área sanitaria y registrar seguimiento.',
+      },
+      {
+        nombre: 'RECOGIDA DE ORINA PARA SEDIMENTO',
+        significado: 'Toma de muestra de orina para análisis de sedimento.',
+        ejemplos: 'Muestra enviada a laboratorio.',
       },
       {
         nombre: 'RECOGIDA DE ORINA PARA CULTIVO',

@@ -43,7 +43,8 @@ export type FormaAdministracion =
 
 export interface TratamientoRegistro {
   nombre: string
-  hora: string
+  farmaco: string
+  horas: string[]
   forma: FormaAdministracion
   formaOtros: string
 }
@@ -66,13 +67,16 @@ export interface Incidencia {
   hospitalRegr: boolean
   dieta: string[]
   dietaOtros: string
+  dietaFecha: string
   tratamiento: TratamientoRegistro[]
   tratamientoOtros: string
-  tratamientoOtrosHora: string
+  tratamientoFecha: string
+  tratamientoOtrosHoras: string[]
   tratamientoOtrosForma: FormaAdministracion
   tratamientoOtrosFormaOtros: string
   proceso: string[]
   procesoOtros: string
+  procesoFecha: string
   desde: string
   hasta: string
   ctesP: string

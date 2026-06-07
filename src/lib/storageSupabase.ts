@@ -3,7 +3,7 @@ import { normalizeEstados } from './estados'
 import { normalizePersona } from './habitaciones'
 import { normalizeLista } from './listas'
 import { supabase } from './supabase'
-import { normalizeTratamientos } from './tratamientos'
+import { normalizeHoras, normalizeTratamientos } from './tratamientos'
 
 type PersonaRow = {
   id: string
@@ -32,13 +32,17 @@ type IncidenciaRow = {
   hospital_regr: boolean
   dieta: string[]
   dieta_otros: string
+  dieta_fecha: string
   tratamiento: TratamientoRegistro[]
   tratamiento_otros: string
+  tratamiento_fecha: string
+  tratamiento_otros_horas: string[]
   tratamiento_otros_hora: string
   tratamiento_otros_forma: Incidencia['tratamientoOtrosForma']
   tratamiento_otros_forma_otros: string
   proceso: string[]
   proceso_otros: string
+  proceso_fecha: string
   desde: string
   hasta: string
   ctes_p: string
@@ -94,13 +98,16 @@ function rowToIncidencia(row: IncidenciaRow): Incidencia {
     hospitalRegr: row.hospital_regr ?? false,
     dieta: normalizeLista(row.dieta),
     dietaOtros: row.dieta_otros ?? '',
+    dietaFecha: row.dieta_fecha ?? '',
     tratamiento: normalizeTratamientos(row.tratamiento),
     tratamientoOtros: row.tratamiento_otros ?? '',
-    tratamientoOtrosHora: row.tratamiento_otros_hora ?? '',
+    tratamientoFecha: row.tratamiento_fecha ?? '',
+    tratamientoOtrosHoras: normalizeHoras(row.tratamiento_otros_horas, row.tratamiento_otros_hora),
     tratamientoOtrosForma: row.tratamiento_otros_forma ?? '',
     tratamientoOtrosFormaOtros: row.tratamiento_otros_forma_otros ?? '',
     proceso: normalizeLista(row.proceso),
     procesoOtros: row.proceso_otros ?? '',
+    procesoFecha: row.proceso_fecha ?? '',
     desde: row.desde ?? '',
     hasta: row.hasta ?? '',
     ctesP: row.ctes_p ?? '',
@@ -139,13 +146,17 @@ function incidenciaToRow(
     hospital_regr: data.hospitalRegr ?? false,
     dieta: data.dieta,
     dieta_otros: data.dietaOtros ?? '',
+    dieta_fecha: data.dietaFecha ?? '',
     tratamiento: normalizeTratamientos(data.tratamiento),
     tratamiento_otros: data.tratamientoOtros ?? '',
-    tratamiento_otros_hora: data.tratamientoOtrosHora ?? '',
+    tratamiento_fecha: data.tratamientoFecha ?? '',
+    tratamiento_otros_horas: normalizeHoras(data.tratamientoOtrosHoras).filter(Boolean),
+    tratamiento_otros_hora: normalizeHoras(data.tratamientoOtrosHoras)[0] ?? '',
     tratamiento_otros_forma: data.tratamientoOtrosForma ?? '',
     tratamiento_otros_forma_otros: data.tratamientoOtrosFormaOtros ?? '',
     proceso: data.proceso,
     proceso_otros: data.procesoOtros ?? '',
+    proceso_fecha: data.procesoFecha ?? '',
     desde: data.desde ?? '',
     hasta: data.hasta ?? '',
     ctes_p: data.ctesP ?? '',

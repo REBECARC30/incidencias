@@ -78,9 +78,10 @@ function IncidenciaCard({
       ? formatTratamientos(
           item.tratamiento,
           item.tratamientoOtros,
-          item.tratamientoOtrosHora,
+          item.tratamientoOtrosHoras,
           item.tratamientoOtrosForma,
           item.tratamientoOtrosFormaOtros,
+          (item as { tratamientoOtrosHora?: string }).tratamientoOtrosHora,
         )
       : formatListaConOtros(item[highlight], item[`${highlight}Otros`])
     : null

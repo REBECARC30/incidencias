@@ -1,6 +1,8 @@
 import type { FormaAdministracion, TratamientoRegistro } from '../types'
 import { GLOSARIO_TRATAMIENTOS } from './glosarioDietasTratamientos'
 
+export const MAX_TRATAMIENTO_HORAS = 4
+
 export const FORMAS_ADMINISTRACION: { id: FormaAdministracion; label: string }[] = [
   { id: 'oral', label: 'Oral' },
   { id: 'sublingual', label: 'Sublingual' },
@@ -23,6 +25,28 @@ const NO_FARMACOLOGICOS = new Set(
     [],
 )
 
+export function emptyHoras(): string[] {
+  return Array.from({ length: MAX_TRATAMIENTO_HORAS }, () => '')
+}
+
+export function normalizeHoras(horas: unknown, legacyHora?: string): string[] {
+  const slots = emptyHoras()
+  const source = Array.isArray(horas)
+    ? horas.map((h) => String(h ?? '').trim())
+    : legacyHora?.trim()
+      ? [legacyHora.trim()]
+      : []
+
+  for (let i = 0; i < Math.min(source.length, MAX_TRATAMIENTO_HORAS); i++) {
+    slots[i] = source[i]
+  }
+  return slots
+}
+
+export function horasActivas(horas: string[]): string[] {
+  return horas.map((h) => h.trim()).filter(Boolean)
+}
+
 export function defaultFormaForTratamiento(nombre: string): FormaAdministracion {
   if (NO_FARMACOLOGICOS.has(nombre)) return 'no_farmacologico'
   if (FARMACOLOGICOS.has(nombre)) return 'oral'
@@ -41,7 +65,8 @@ export function formaAdministracionLabel(
 export function emptyTratamientoRegistro(nombre: string): TratamientoRegistro {
   return {
     nombre,
-    hora: '',
+    farmaco: '',
+    horas: emptyHoras(),
     forma: defaultFormaForTratamiento(nombre),
     formaOtros: '',
   }
@@ -56,10 +81,11 @@ export function normalizeTratamientos(valor: unknown): TratamientoRegistro[] {
   }
 
   return valor.map((item) => {
-    const r = item as TratamientoRegistro
+    const r = item as TratamientoRegistro & { hora?: string }
     return {
       nombre: r.nombre ?? '',
-      hora: r.hora ?? '',
+      farmaco: r.farmaco ?? '',
+      horas: normalizeHoras(r.horas, r.hora),
       forma: r.forma ?? defaultFormaForTratamiento(r.nombre ?? ''),
       formaOtros: r.formaOtros ?? '',
     }
@@ -75,8 +101,12 @@ export function syncTratamientos(nombres: string[], actuales: TratamientoRegistr
 
 export function formatTratamientoRegistro(r: TratamientoRegistro): string {
   const forma = formaAdministracionLabel(r.forma, r.formaOtros)
-  const partes = [r.nombre]
-  if (r.hora) partes.push(r.hora)
+  const titulo = r.farmaco.trim()
+    ? `${r.nombre} (${r.farmaco.trim()})`
+    : r.nombre
+  const partes = [titulo]
+  const horas = horasActivas(r.horas)
+  if (horas.length) partes.push(horas.join(', '))
   if (forma) partes.push(forma)
   return partes.join(' · ')
 }
@@ -84,16 +114,18 @@ export function formatTratamientoRegistro(r: TratamientoRegistro): string {
 export function formatTratamientos(
   registros: TratamientoRegistro[],
   otros?: string,
-  otrosHora?: string,
+  otrosHoras?: string[],
   otrosForma?: FormaAdministracion,
   otrosFormaOtros?: string,
+  legacyOtrosHora?: string,
 ): string {
   const lineas = registros.map(formatTratamientoRegistro).filter(Boolean)
   const extra = otros?.trim()
   if (extra) {
     const forma = formaAdministracionLabel(otrosForma, otrosFormaOtros)
     const partes = [`Otros: ${extra}`]
-    if (otrosHora?.trim()) partes.push(otrosHora.trim())
+    const horas = horasActivas(normalizeHoras(otrosHoras, legacyOtrosHora))
+    if (horas.length) partes.push(horas.join(', '))
     if (forma) partes.push(forma)
     lineas.push(partes.join(' · '))
   }
