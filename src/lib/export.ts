@@ -3,6 +3,7 @@ import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
 import type { Incidencia, Persona } from '../types'
 import { areaLabel, APP_TITLE, COMPANY_NAME, formatDate, turnoLabel } from './constants'
+import { formatAreasCodes } from './areas'
 import { formatEstados } from './estados'
 import { alaLabel } from './habitaciones'
 import { formatListaConOtros } from './listas'
@@ -30,8 +31,8 @@ export function exportIncidenciasExcel(
       Código: p?.codigo ?? '',
       Ala: p ? alaLabel(p.ala) : '',
       Habitación: p?.habitacion ?? '',
-      DE: item.de,
-      A: item.a,
+      DE: formatAreasCodes(item.de),
+      A: formatAreasCodes(item.a),
       Estado: formatListaConOtros(item.estado, item.estadoOtros),
       Incidencia: item.incidencia,
       Prioridad: item.prioridad ? prioridadLabel(item.prioridad) : '',
@@ -96,7 +97,7 @@ export function exportIncidenciasPdf(
       `${formatDate(item.fecha)} ${item.turno}`,
       p?.codigo ?? '—',
       p ? `${alaLabel(p.ala)} · ${p.habitacion}` : '—',
-      `${item.de} → ${item.a}`,
+      `${formatAreasCodes(item.de)} → ${formatAreasCodes(item.a)}`,
       formatEstados(item.estado) + (item.estadoOtros.trim() ? ` · Otros: ${item.estadoOtros.trim()}` : ''),
       item.incidencia,
       item.lesiones,

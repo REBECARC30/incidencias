@@ -2,9 +2,8 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Check, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import type { AreaCode, Incidencia, Turno } from '../types'
+import type { Incidencia, Turno } from '../types'
 import {
-  AREAS,
   TURNOS,
   todayISO,
 } from '../lib/constants'
@@ -20,6 +19,7 @@ import { TratamientosEditor } from '../components/TratamientosEditor'
 import { PrioridadTags } from '../components/PrioridadTags'
 import { FirmaDibujoPad } from '../components/FirmaDibujoPad'
 import { ApartadoPeriodo } from '../components/ApartadoPeriodo'
+import { AreasSelector } from '../components/AreasSelector'
 import { Button, Callout, Card, Field, PageHeader, WizardSteps, inputClass, selectClass } from '../components/ui'
 
 const STEPS = [
@@ -36,8 +36,8 @@ const initialForm = (): FormState => ({
   personaId: '',
   fecha: todayISO(),
   turno: 'M',
-  de: 'A.D',
-  a: 'A.S',
+  de: ['A.D'],
+  a: ['A.S'],
   estado: [],
   estadoOtros: '',
   incidencia: '',
@@ -291,32 +291,12 @@ export function NuevaIncidenciaPage() {
               </Field>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="DE (origen)">
-                <select
-                  className={selectClass}
-                  value={form.de}
-                  onChange={(e) => patch('de', e.target.value as AreaCode)}
-                >
-                  {AREAS.map((a) => (
-                    <option key={a.code} value={a.code}>
-                      {a.code} — {a.label}
-                    </option>
-                  ))}
-                </select>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <Field label="DE (origen)" hint="Puedes marcar varias áreas">
+                <AreasSelector value={form.de} onChange={(de) => patch('de', de)} />
               </Field>
-              <Field label="A (destino)">
-                <select
-                  className={selectClass}
-                  value={form.a}
-                  onChange={(e) => patch('a', e.target.value as AreaCode)}
-                >
-                  {AREAS.map((a) => (
-                    <option key={a.code} value={a.code}>
-                      {a.code} — {a.label}
-                    </option>
-                  ))}
-                </select>
+              <Field label="A (destino)" hint="Puedes marcar varias áreas">
+                <AreasSelector value={form.a} onChange={(a) => patch('a', a)} />
               </Field>
             </div>
         </div>

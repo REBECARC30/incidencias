@@ -1,5 +1,6 @@
-import type { Incidencia } from '../types'
+import type { AreaCode, Incidencia } from '../types'
 import { normalizeEstados } from './estados'
+import { normalizeAreas } from './areas'
 import { normalizeLista, normalizeProcesoLista } from './listas'
 import { normalizeHoras, normalizeTratamientos } from './tratamientos'
 
@@ -44,6 +45,8 @@ export function normalizeIncidencia(item: Incidencia & LegacyIncidenciaFields): 
     ctesGlucemia: item.ctesGlucemia ?? '',
     ctesPeso: item.ctesPeso ?? '',
     prioridad: item.prioridad ?? '',
+    de: normalizeAreas(item.de as AreaCode | AreaCode[]),
+    a: normalizeAreas(item.a as AreaCode | AreaCode[]),
     dieta: normalizeLista(item.dieta as string | string[]),
     dietaOtros: item.dietaOtros ?? '',
     dietaDesde: dieta.desde,

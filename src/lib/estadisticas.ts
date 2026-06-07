@@ -1,4 +1,5 @@
 import type { Incidencia, Persona } from '../types'
+import { normalizeAreas, formatAreas } from './areas'
 import { AREAS, TURNOS, areaLabel, turnoLabel } from './constants'
 import { alaLabel } from './habitaciones'
 import { isEventoCritico } from './incidencias'
@@ -119,9 +120,9 @@ export function calcularEstadisticas(
 
   for (const item of incidencias) {
     increment(turnoMap, turnoLabel(item.turno))
-    increment(areaDeMap, areaLabel(item.de))
-    increment(areaAMap, areaLabel(item.a))
-    increment(flujoMap, `${areaLabel(item.de)} → ${areaLabel(item.a)}`)
+    for (const code of normalizeAreas(item.de)) increment(areaDeMap, areaLabel(code))
+    for (const code of normalizeAreas(item.a)) increment(areaAMap, areaLabel(code))
+    increment(flujoMap, `${formatAreas(item.de)} → ${formatAreas(item.a)}`)
 
     const persona = personaMap.get(item.personaId)
     if (persona) increment(alaMap, alaLabel(persona.ala))

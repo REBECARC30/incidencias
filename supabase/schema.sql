@@ -82,8 +82,8 @@ CREATE TABLE IF NOT EXISTS public.incidencias (
 
   fecha                         date NOT NULL,
   turno                         public.turno_code NOT NULL,
-  de                            public.area_code NOT NULL,
-  a                             public.area_code NOT NULL,
+  de                            public.area_code[] NOT NULL DEFAULT '{}',
+  a                             public.area_code[] NOT NULL DEFAULT '{}',
 
   estado                        text[] NOT NULL DEFAULT '{}',
   estado_otros                  text NOT NULL DEFAULT '',
@@ -160,8 +160,11 @@ CREATE INDEX IF NOT EXISTS incidencias_created_at_idx
 CREATE INDEX IF NOT EXISTS incidencias_turno_idx
   ON public.incidencias (turno);
 
-CREATE INDEX IF NOT EXISTS incidencias_de_a_idx
-  ON public.incidencias (de, a);
+CREATE INDEX IF NOT EXISTS incidencias_de_gin_idx
+  ON public.incidencias USING gin (de);
+
+CREATE INDEX IF NOT EXISTS incidencias_a_gin_idx
+  ON public.incidencias USING gin (a);
 
 CREATE INDEX IF NOT EXISTS incidencias_tratamiento_gin_idx
   ON public.incidencias USING gin (tratamiento jsonb_path_ops);

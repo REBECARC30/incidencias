@@ -57,8 +57,8 @@ export interface Incidencia {
   personaId: string
   fecha: string
   turno: Turno
-  de: AreaCode
-  a: AreaCode
+  de: AreaCode[]
+  a: AreaCode[]
   estado: string[]
   estadoOtros: string
   incidencia: string

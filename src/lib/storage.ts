@@ -1,6 +1,7 @@
 import type { Incidencia, IncidenciaFilters, Persona } from '../types'
 import { normalizePersona } from './habitaciones'
 import { formatListaConOtros } from './listas'
+import { normalizeAreas } from './areas'
 import { matchesIncidenciaFechaFilter } from './dates'
 import { normalizeIncidencia } from './normalizeIncidencia'
 import { formatTratamientos } from './tratamientos'
@@ -229,8 +230,8 @@ export function filterIncidencias(
     if (filters.personaId && item.personaId !== filters.personaId) return false
     if (personaIdsAla && !personaIdsAla.has(item.personaId)) return false
     if (filters.turno && item.turno !== filters.turno) return false
-    if (filters.de && item.de !== filters.de) return false
-    if (filters.a && item.a !== filters.a) return false
+    if (filters.de && !normalizeAreas(item.de).includes(filters.de)) return false
+    if (filters.a && !normalizeAreas(item.a).includes(filters.a)) return false
     if (
       !matchesIncidenciaFechaFilter(item, filters.fechaDesde, filters.fechaHasta, {
         periodoTratamiento: options?.periodoTratamiento,

@@ -3,7 +3,8 @@ import { Download, FileSpreadsheet, Search, Trash2, X } from 'lucide-react'
 import { useLocation, useSearchParams } from 'react-router-dom'
 import type { Incidencia, IncidenciaFilters, Persona, Ala } from '../types'
 import { useAuth } from '../context/AuthContext'
-import { AREAS, TURNOS, areaLabel, formatDate, formatDateTime, turnoLabel } from '../lib/constants'
+import { formatAreas } from '../lib/areas'
+import { AREAS, TURNOS, formatDate, formatDateTime, turnoLabel } from '../lib/constants'
 import { ALAS } from '../lib/habitaciones'
 import {
   filterIncidenciasPorConcepto,
@@ -126,7 +127,7 @@ function IncidenciaCard({
             </p>
           )}
           <p className="mt-1 text-xs font-medium text-slate-400">
-            {areaLabel(item.de)} → {areaLabel(item.a)} · Firma: {item.firma}
+            {formatAreas(item.de)} → {formatAreas(item.a)} · Firma: {item.firma}
           </p>
         </div>
         <span className="shrink-0 rounded-lg bg-slate-100 px-2 py-1 text-xs font-medium text-slate-500">
