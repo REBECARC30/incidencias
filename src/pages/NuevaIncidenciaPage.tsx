@@ -291,7 +291,7 @@ export function NuevaIncidenciaPage() {
               </Field>
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2">
               <Field label="DE (origen)" hint="Puedes marcar varias áreas">
                 <AreasSelector value={form.de} onChange={(de) => patch('de', de)} />
               </Field>
