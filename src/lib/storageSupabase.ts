@@ -1,5 +1,6 @@
 import type { Incidencia, Persona, TratamientoRegistro } from '../types'
 import { normalizePersona } from './habitaciones'
+import { normalizeAreas } from './areas'
 import { normalizeIncidencia, type LegacyIncidenciaFields } from './normalizeIncidencia'
 import { getSupabase } from './supabase'
 import { normalizeHoras, normalizeTratamientos } from './tratamientos'
@@ -15,7 +16,7 @@ type PersonaRow = {
 
 type IncidenciaRow = {
   id: string
-  persona_id: string
+  persona_id: string | null
   fecha: string
   turno: Incidencia['turno']
   de: Incidencia['de']
@@ -93,6 +94,17 @@ function isMissingColumnError(message: string): boolean {
   return /schema cache|does not exist|could not find the/i.test(message)
 }
 
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value.trim(),
+  )
+}
+
+function toUuidOrNull(value: string | null | undefined): string | null {
+  if (!value?.trim()) return null
+  return isUuid(value) ? value.trim() : null
+}
+
 function rowToPersona(row: PersonaRow): Persona {
   return normalizePersona({
     id: row.id,
@@ -117,7 +129,7 @@ function personaToRow(input: Omit<Persona, 'id' | 'createdAt'> & { id?: string }
 function rowToIncidencia(row: IncidenciaRow): Incidencia {
   return normalizeIncidencia({
     id: row.id,
-    personaId: row.persona_id,
+    personaId: row.persona_id ?? '',
     fecha: row.fecha,
     turno: row.turno,
     de: row.de,
@@ -172,11 +184,11 @@ function incidenciaToRow(
 ): IncidenciaInsertRow {
   return {
     ...(id ? { id } : { id: crypto.randomUUID() }),
-    persona_id: data.personaId,
+    persona_id: toUuidOrNull(data.personaId),
     fecha: data.fecha,
     turno: data.turno,
-    de: data.de,
-    a: data.a,
+    de: normalizeAreas(data.de),
+    a: normalizeAreas(data.a),
     estado: data.estado,
     estado_otros: data.estadoOtros ?? '',
     incidencia: data.incidencia ?? '',
@@ -211,7 +223,7 @@ function incidenciaToRow(
     observaciones: data.observaciones ?? '',
     firma: data.firma ?? '',
     firma_dibujo: data.firmaDibujo ?? '',
-    created_by: data.createdBy || null,
+    created_by: toUuidOrNull(data.createdBy),
   } as IncidenciaInsertRow
 }
 
@@ -243,6 +255,18 @@ function supabaseErrorMessage(message: string): string {
     return (
       'La base de datos de Supabase no está actualizada. En el SQL Editor del proyecto ejecuta el archivo supabase/migration-fechas-apartados.sql y vuelve a intentarlo.'
     )
+  }
+  if (
+    /area_code|malformed array|column "de"|column "a"|invalid input syntax.*de|invalid input syntax.*a/i.test(
+      message,
+    )
+  ) {
+    return (
+      'Las columnas DE y A deben aceptar varias áreas. En el SQL Editor ejecuta supabase/migration-areas-multiples.sql y vuelve a intentarlo.'
+    )
+  }
+  if (/invalid input syntax for type uuid/i.test(message)) {
+    return 'Identificador no válido. Cierra sesión, vuelve a entrar e intenta de nuevo.'
   }
   return message
 }
@@ -333,6 +357,7 @@ export async function createIncidenciaInSupabase(
   data: Omit<Incidencia, 'id' | 'createdAt'>,
 ): Promise<Incidencia> {
   await ensureAuthenticated()
+
   const db = client()
   const row = incidenciaToRow(data)
 

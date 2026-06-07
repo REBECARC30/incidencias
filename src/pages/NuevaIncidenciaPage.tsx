@@ -75,7 +75,6 @@ const initialForm = (): FormState => ({
 
 function getCamposVacios(form: FormState): string[] {
   const vacios: string[] = []
-  if (!form.personaId) vacios.push('Persona')
   if (!form.fecha) vacios.push('Fecha')
   if (!form.estado.length && !form.estadoOtros.trim()) vacios.push('Estado')
   if (!form.incidencia.trim()) vacios.push('Incidencia')
@@ -249,11 +248,11 @@ export function NuevaIncidenciaPage() {
 
       <Card className="max-w-2xl animate-fade-up">
         <div className={step === 0 ? 'space-y-4' : 'hidden'}>
-            <Field label="Persona atendida (código)">
+            <Field label="Persona atendida (código)" hint="Opcional — déjalo vacío si la incidencia no va dirigida a un paciente">
               <PersonaSelect
                 value={form.personaId}
                 onChange={(v) => patch('personaId', v)}
-                emptyLabel="— Seleccionar —"
+                emptyLabel="— Sin persona —"
               />
             </Field>
 

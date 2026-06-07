@@ -126,7 +126,7 @@ export function calcularEstadisticas(
 
     const persona = personaMap.get(item.personaId)
     if (persona) increment(alaMap, alaLabel(persona.ala))
-    increment(personaCountMap, item.personaId)
+    increment(personaCountMap, item.personaId || '__sin_persona__')
 
     const prioLabel = item.prioridad ? prioridadLabel(item.prioridad) : 'Sin indicar'
     increment(prioridadMap, prioLabel)
@@ -182,7 +182,7 @@ export function calcularEstadisticas(
     .map(([id, count]) => {
       const p = personaMap.get(id)
       return {
-        label: p ? p.codigo : 'Persona desconocida',
+        label: id === '__sin_persona__' ? 'Sin persona' : p ? p.codigo : 'Persona desconocida',
         count,
         pct: pct(count, total),
       }

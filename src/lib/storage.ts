@@ -228,7 +228,7 @@ export function filterIncidencias(
 
   return items.filter((item) => {
     if (filters.personaId && item.personaId !== filters.personaId) return false
-    if (personaIdsAla && !personaIdsAla.has(item.personaId)) return false
+    if (personaIdsAla && item.personaId && !personaIdsAla.has(item.personaId)) return false
     if (filters.turno && item.turno !== filters.turno) return false
     if (filters.de && !normalizeAreas(item.de).includes(filters.de)) return false
     if (filters.a && !normalizeAreas(item.a).includes(filters.a)) return false

@@ -55,6 +55,12 @@ BEGIN
   END IF;
 END $$;
 
+-- DE / A: varias áreas por incidencia (text[])
+-- Ejecuta supabase/migration-areas-multiples.sql si de/a siguen siendo area_code simple.
+
+-- Persona opcional en incidencias
+-- Ejecuta supabase/migration-persona-opcional.sql si persona_id sigue siendo NOT NULL.
+
 -- Refrescar API (obligatorio tras añadir columnas)
 NOTIFY pgrst, 'reload schema';
 

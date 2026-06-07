@@ -106,7 +106,7 @@ function IncidenciaCard({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-semibold text-slate-900">
-              {persona ? persona.codigo : 'Persona desconocida'}
+              {persona ? persona.codigo : item.personaId ? 'Persona desconocida' : 'Sin persona'}
             </span>
             <Badge tone="brand">
               {formatDate(item.fecha)} · {turnoLabel(item.turno)}

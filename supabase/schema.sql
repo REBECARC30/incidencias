@@ -78,12 +78,14 @@ CREATE TRIGGER personas_set_updated_at
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.incidencias (
   id                            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  persona_id                    uuid NOT NULL REFERENCES public.personas (id) ON DELETE RESTRICT,
+  persona_id                    uuid REFERENCES public.personas (id) ON DELETE RESTRICT,
 
   fecha                         date NOT NULL,
   turno                         public.turno_code NOT NULL,
-  de                            public.area_code[] NOT NULL DEFAULT '{}',
-  a                             public.area_code[] NOT NULL DEFAULT '{}',
+  de                            text[] NOT NULL DEFAULT '{}'
+    CHECK (de <@ ARRAY['A.D', 'A.S', 'A.T', 'P.R', 'EQ', 'A.C', 'A.L', 'A.R', 'A.CO']::text[]),
+  a                             text[] NOT NULL DEFAULT '{}'
+    CHECK (a <@ ARRAY['A.D', 'A.S', 'A.T', 'P.R', 'EQ', 'A.C', 'A.L', 'A.R', 'A.CO']::text[]),
 
   estado                        text[] NOT NULL DEFAULT '{}',
   estado_otros                  text NOT NULL DEFAULT '',
@@ -161,10 +163,10 @@ CREATE INDEX IF NOT EXISTS incidencias_turno_idx
   ON public.incidencias (turno);
 
 CREATE INDEX IF NOT EXISTS incidencias_de_gin_idx
-  ON public.incidencias USING gin (de);
+  ON public.incidencias USING gin (de array_ops);
 
 CREATE INDEX IF NOT EXISTS incidencias_a_gin_idx
-  ON public.incidencias USING gin (a);
+  ON public.incidencias USING gin (a array_ops);
 
 CREATE INDEX IF NOT EXISTS incidencias_tratamiento_gin_idx
   ON public.incidencias USING gin (tratamiento jsonb_path_ops);
@@ -196,7 +198,7 @@ SELECT
   p.ala     AS persona_ala,
   p.habitacion AS persona_habitacion
 FROM public.incidencias i
-JOIN public.personas p ON p.id = i.persona_id;
+LEFT JOIN public.personas p ON p.id = i.persona_id;
 
 -- -----------------------------------------------------------------------------
 -- Row Level Security (RLS)
